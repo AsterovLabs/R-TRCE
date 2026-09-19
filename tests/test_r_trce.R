@@ -40,6 +40,7 @@ source(file.path(root_dir, "R", "analyzer.R"))
 source(file.path(root_dir, "R", "annotator.R"))
 source(file.path(root_dir, "R", "validator.R"))
 source(file.path(root_dir, "R", "explain.R"))
+source(file.path(root_dir, "R", "pedagogy.R"))
 
 # Test harness helpers
 pass_count <- 0
@@ -166,6 +167,83 @@ for (rel in test_targets) {
 
   unlink(tmp_out)
 }
+
+# ------------------------------------------------------------------------------
+cat("\n--- 6. Testing Pedagogical Engine & Student Tutor (R/pedagogy.R) ---\n")
+
+# Synthetic code with student traps
+bad_code <- "
+bad_func <- function(x, df) {
+  res <- c()
+  for (i in 1:length(x)) {
+    if (x[i] == NA) next
+    res <- c(res, x[i])
+  }
+  attach(df)
+  num <- as.numeric(factor_var)
+  global_state <<- res
+  res
+}
+"
+bad_tmp <- tempfile(fileext = ".R")
+writeLines(bad_code, bad_tmp)
+p_bad <- parse_r_file(bad_tmp)
+a_bad <- analyze_r_file(p_bad)
+pf_list <- detect_student_pitfalls(p_bad, a_bad)
+unlink(bad_tmp)
+
+assert("Pitfall Sentinel flags 1:length(x)", any(sapply(pf_list, function(x) x$type == "empty_vector_colon")))
+assert("Pitfall Sentinel flags == NA comparison", any(sapply(pf_list, function(x) x$type == "na_equality_check")))
+assert("Pitfall Sentinel flags attach()", any(sapply(pf_list, function(x) x$type == "attach_usage")))
+assert("Pitfall Sentinel flags factor to numeric conversion", any(sapply(pf_list, function(x) x$type == "factor_to_numeric")))
+assert("Pitfall Sentinel flags global <<- assignment", any(sapply(pf_list, function(x) x$type == "super_assignment")))
+
+# Test pipeline deconstruction
+pipe_code <- "
+library(dplyr)
+transform_data <- function(df) {
+  df |>
+    filter(val > 10) |>
+    mutate(status = 'active') |>
+    summarise(total = sum(val))
+}
+"
+pipe_tmp <- tempfile(fileext = ".R")
+writeLines(pipe_code, pipe_tmp)
+p_pipe <- parse_r_file(pipe_tmp)
+pipes <- deconstruct_pipes(p_pipe)
+unlink(pipe_tmp)
+
+assert("Pipeline deconstructor identifies pipeline with 3 stages", length(pipes) >= 1 && length(pipes[[1]]$stages) == 3)
+assert("Pipeline deconstructor identifies filter, mutate, summarise",
+       all(c("filter", "mutate", "summarise") %in% sapply(pipes[[1]]$stages, function(s) s$fn)))
+
+# Test formula deconstruction
+stat_code <- "
+fit_model <- function(df) {
+  lm(y ~ x1 + x2 * x3, data = df)
+}
+"
+stat_tmp <- tempfile(fileext = ".R")
+writeLines(stat_code, stat_tmp)
+p_stat <- parse_r_file(stat_tmp)
+formulas <- deconstruct_formulas(p_stat)
+unlink(stat_tmp)
+
+assert("Formula deconstructor detects formula", length(formulas) >= 1)
+assert("Formula deconstructor extracts response variable 'y'", formulas[[1]]$response_variable == "y")
+assert("Formula deconstructor detects interaction terms", isTRUE(formulas[[1]]$has_interaction))
+
+# Test student quiz generator
+quiz <- generate_student_quiz(p_stat, analyze_r_file(p_stat))
+assert("Quiz generator synthesizes comprehension questions", length(quiz) >= 3)
+assert("Quiz question 1 has question, options, and correct answer",
+       !is.null(quiz[[1]]$question) && length(quiz[[1]]$options) >= 2 && !is.null(quiz[[1]]$correct_answer))
+
+# Test student explanation output
+tutor_text <- generate_student_explanation(p_stat, analyze_r_file(p_stat))
+assert("Student explanation generates comprehensive text walkthrough",
+       grepl("STUDENT TUTOR", tutor_text) && grepl("PACKAGE TOOLKIT", tutor_text) && grepl("TRCE RUBRIC", tutor_text))
 
 # ------------------------------------------------------------------------------
 # Test Summary

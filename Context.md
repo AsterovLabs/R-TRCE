@@ -18,7 +18,8 @@ R Parse/
 │   ├── analyzer.R          # Semantic analyzer and archetype recognition
 │   ├── annotator.R         # TRCE 6-point annotation generator and code injector
 │   ├── validator.R         # Trace integrity and coverage auditing
-│   └── explain.R           # Plain text/Markdown explanation and JSON export
+│   ├── explain.R           # Plain text/Markdown explanation and JSON export
+│   └── pedagogy.R          # Student tutor, pitfall sentinel, pipe/formula deconstruction & quizzes
 └── tests/
     └── test_r_trce.R       # Automated test suite running against synthetic and real R scripts
 ```
@@ -41,6 +42,7 @@ R Parse/
 | `trce-rparse-010` | Shiny Web Browser Client / Developer | Interactive Shiny UI and Server studio for AST inspection, architecture explanation, and TRCE annotation | `app.R` (`ui`, `server`) |
 | `trce-rparse-011` | Test Suite Runner / CI Verifier | Automated test harness verifying AST parsing, semantic analysis, annotation injection, and trace validation | `tests/test_r_trce.R` (`run_all_tests`) |
 | `trce-rparse-012` | R-TRCE Engine / Parser Subsystem | Maps AST expressions to line boundaries and associates preceding comment scaffolding | `R/parser.R` (`extract_top_expressions`) |
+| `trce-rparse-013` | R-TRCE Engine / Pedagogical & Educational Subsystem | Deconstructs R ASTs into beginner-friendly explanations, audits student pitfalls, visualizes pipelines/formulas, and synthesizes quizzes | `R/pedagogy.R` (`detect_student_pitfalls`, `deconstruct_pipes`, `deconstruct_formulas`, `generate_student_explanation`, `generate_student_quiz`) |
 
 ---
 

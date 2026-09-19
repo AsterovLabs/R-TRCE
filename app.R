@@ -47,6 +47,7 @@ source(file.path(script_dir, "R", "analyzer.R"))
 source(file.path(script_dir, "R", "annotator.R"))
 source(file.path(script_dir, "R", "validator.R"))
 source(file.path(script_dir, "R", "explain.R"))
+source(file.path(script_dir, "R", "pedagogy.R"))
 
 # Find available sample files from R Test if accessible
 r_test_dir <- file.path(dirname(script_dir), "R Test")
@@ -196,6 +197,30 @@ ui <- fluidPage(
             hr(),
             h4("Lexical Token Stream (First 20 tokens)"),
             tableOutput("parse_data_table")
+          )
+        ),
+
+        # --- TAB 5: STUDENT STUDIO & LEARNING SUITE ---
+        tabPanel("🎓 Student Studio",
+          br(),
+          tabsetPanel(
+            id = "student_subtabs",
+            tabPanel("Pitfall Sentinel",
+              br(),
+              uiOutput("student_pitfalls_ui")
+            ),
+            tabPanel("Concept Decoder & Packages",
+              br(),
+              uiOutput("student_concepts_ui")
+            ),
+            tabPanel("Data Pipelines & Formulas",
+              br(),
+              uiOutput("student_pipelines_ui")
+            ),
+            tabPanel("Self-Study Quiz",
+              br(),
+              uiOutput("student_quiz_ui")
+            )
           )
         )
       )
@@ -604,6 +629,204 @@ server <- function(input, output, session) {
       writeLines(export_trace_json(list(val)), file)
     }
   )
+
+  # --- STUDENT STUDIO SERVER OUTPUTS ---
+  output$student_pitfalls_ui <- renderUI({
+    p <- parsed_data()
+    a <- analysis_data()
+    req(p, a)
+    pitfalls <- detect_student_pitfalls(p, a)
+
+    if (length(pitfalls) == 0) {
+      return(div(class = "card", style = "border-left: 5px solid #10b981; background: #f0fdf4;",
+        h3(style = "color: #166534; margin-top: 0;", "🎉 Clean Bill of Health!"),
+        p(style = "color: #15803d; font-size: 15px;",
+          "R-TRCE scanned this script and found zero common beginner traps, NA comparison errors, or quadratic copy-on-modify memory bottlenecks.")
+      ))
+    }
+
+    cards <- lapply(seq_along(pitfalls), function(i) {
+      pf <- pitfalls[[i]]
+      border_col <- if (pf$severity == "warning") "#ef4444" else "#f59e0b"
+      bg_col <- if (pf$severity == "warning") "#fef2f2" else "#fffbeb"
+      badge_cls <- if (pf$severity == "warning") "badge-warning" else "badge-info"
+
+      div(class = "card", style = sprintf("border-left: 5px solid %s; background: %s; margin-bottom: 16px;", border_col, bg_col),
+        div(style = "display: flex; justify-content: space-between; align-items: center;",
+          h4(style = "margin: 0; font-weight: 700;", sprintf("%d. %s (Line %d)", i, pf$title, pf$line)),
+          span(class = badge_cls, toupper(pf$severity))
+        ),
+        p(style = "margin-top: 10px; color: #334155; font-size: 14px;", pf$description),
+        div(style = "background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-top: 8px;",
+          strong(style = "color: #0f172a;", "💡 Recommended Fix: "),
+          span(style = "color: #0369a1; font-family: monospace;", pf$suggestion)
+        ),
+        if (nzchar(pf$code_snippet)) {
+          div(style = "margin-top: 8px;",
+            span(class = "field-label", "Detected Code:"),
+            tags$pre(style = "background: #1e293b; color: #f8fafc; padding: 8px; border-radius: 4px; font-size: 12px; margin-top: 4px;", pf$code_snippet)
+          )
+        }
+      )
+    })
+
+    tagList(
+      div(style = "margin-bottom: 16px;",
+        h3(style = "margin: 0 0 6px;", "Student Pitfall & Safety Audit"),
+        p(style = "color: #64748b;", sprintf("Found %d potential conceptual or memory trap(s) to review.", length(pitfalls)))
+      ),
+      cards
+    )
+  })
+
+  output$student_concepts_ui <- renderUI({
+    p <- parsed_data()
+    a <- analysis_data()
+    req(p, a)
+    primers <- package_primer(a$imports)
+
+    pkg_cards <- if (length(primers) == 0) {
+      div(class = "card",
+        h4("Standard Base R Environment"),
+        p("This script relies solely on R's core built-in standard library without external dependencies.")
+      )
+    } else {
+      div(class = "card",
+        h4("Imported Libraries & Package Primer"),
+        lapply(names(primers), function(pkg) {
+          info <- primers[[pkg]]
+          div(style = "border-bottom: 1px solid #e2e8f0; padding: 10px 0;",
+            div(style = "display: flex; gap: 10px; align-items: center;",
+              strong(style = "font-size: 16px; color: #0284c7;", paste0("library(", info$name, ")")),
+              span(class = "badge-info", info$domain)
+            ),
+            p(style = "margin: 6px 0 0; color: #475569; font-size: 14px;", info$role)
+          )
+        })
+      )
+    }
+
+    func_cards <- div(class = "card",
+      h4("Functions & Scoping Audit"),
+      p(style = "color: #64748b; font-size: 13px;", "Understanding functional building blocks and side effects:"),
+      lapply(a$components, function(comp) {
+        if (comp$kind != "function") return(NULL)
+        is_pure <- !isTRUE(comp$has_super_assign)
+        div(style = "border-left: 4px solid #3b82f6; padding: 8px 12px; margin-bottom: 12px; background: #f8fafc;",
+          h5(style = "margin: 0 0 4px; font-weight: 700;", sprintf("%s(%s)", comp$name, paste(comp$args, collapse = ", "))),
+          div(style = "display: flex; gap: 8px;",
+            span(class = if (is_pure) "badge-success" else "badge-warning", if (is_pure) "Pure Function" else "Impure (<<-)"),
+            span(class = "badge-secondary", comp$archetype)
+          ),
+          p(style = "margin: 6px 0 0; color: #64748b; font-size: 12px;",
+            sprintf("Defined on lines %d-%d.%s", comp$line1, comp$line2,
+                    if (length(comp$calls_local) > 0) sprintf(" Calls local function(s): %s.", paste(comp$calls_local, collapse = ", ")) else ""))
+        )
+      })
+    )
+
+    trce_rubric <- div(class = "card", style = "background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white;",
+      h4(style = "color: white;", "The 6-Point TRCE Inquiry Rubric"),
+      p(style = "color: #94a3b8; font-size: 13px;", "How to deconstruct any piece of code like a computer scientist:"),
+      tags$ul(style = "line-height: 1.8; font-size: 13px;",
+        tags$li(strong("WHO: "), "Who executes this code? (User script, ggplot renderer, or Shiny server)"),
+        tags$li(strong("WHAT: "), "What exact mechanical operation is executed? (Filtering, joining, modeling)"),
+        tags$li(strong("WHERE: "), "Where is the data flowing from and to? (Upstream table -> downstream view)"),
+        tags$li(strong("WHEN: "), "When does this trigger? (On file source, button click, or iteration step)"),
+        tags$li(strong("WHY: "), "Why is it designed this way? (Why avoid loops? Why vectorize?)"),
+        tags$li(strong("HOW: "), "How does memory and state change? (Copy-on-modify, lexical closure)")
+      )
+    )
+
+    tagList(pkg_cards, func_cards, trce_rubric)
+  })
+
+  output$student_pipelines_ui <- renderUI({
+    p <- parsed_data()
+    req(p)
+    pipes <- deconstruct_pipes(p)
+    formulas <- deconstruct_formulas(p)
+
+    pipe_card <- if (length(pipes) == 0) {
+      div(class = "card",
+        h4("Data Pipelines (|>, %>%)"),
+        p(style = "color: #64748b;", "No piped expressions (|>, %>%) detected in this file.")
+      )
+    } else {
+      div(class = "card",
+        h4("Data Pipeline Flow Inspector"),
+        p(style = "color: #64748b; font-size: 13px;", "Step-by-step unrolling of piped operations:"),
+        lapply(seq_along(pipes), function(i) {
+          pipe <- pipes[[i]]
+          div(style = "margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;",
+            h5(style = "margin: 0 0 10px; color: #1e293b;", sprintf("Pipeline #%d (starts at line %d with source: '%s')", i, pipe$line1, pipe$source)),
+            lapply(seq_along(pipe$stages), function(s_idx) {
+              stg <- pipe$stages[[s_idx]]
+              div(style = "margin-left: 15px; border-left: 3px solid #0284c7; padding-left: 10px; margin-bottom: 8px;",
+                strong(style = "color: #0369a1;", sprintf("Step %d: %s()", s_idx, stg$fn)),
+                p(style = "margin: 2px 0 0; color: #475569; font-size: 13px;", stg$explanation)
+              )
+            })
+          )
+        })
+      )
+    }
+
+    formula_card <- if (length(formulas) == 0) {
+      div(class = "card",
+        h4("Statistical Model Formulas (~)"),
+        p(style = "color: #64748b;", "No statistical formula specifications (~) detected in this file.")
+      )
+    } else {
+      div(class = "card",
+        h4("Statistical Model Deconstructor"),
+        p(style = "color: #64748b; font-size: 13px;", "Translating R model formulas into statistical equations:"),
+        lapply(formulas, function(f) {
+          div(style = "border-left: 4px solid #8b5cf6; background: #faf5ff; padding: 12px; margin-bottom: 12px; border-radius: 4px;",
+            h5(style = "margin: 0 0 6px; font-family: monospace; font-size: 15px; color: #581c87;", f$formula),
+            tags$ul(style = "font-size: 13px; color: #334155; margin-bottom: 0;",
+              tags$li(strong("Response Variable (Y): "), f$response_variable),
+              tags$li(strong("Predictors (X): "), paste(f$rhs_terms, collapse = ", ")),
+              tags$li(strong("Interaction Terms: "), if (f$has_interaction) "Present (: or *)" else "None (additive effects only)"),
+              tags$li(strong("Theoretical Meaning: "), f$explanation)
+            )
+          )
+        })
+      )
+    }
+
+    tagList(pipe_card, formula_card)
+  })
+
+  output$student_quiz_ui <- renderUI({
+    p <- parsed_data()
+    a <- analysis_data()
+    req(p, a)
+    questions <- generate_student_quiz(p, a)
+
+    div(class = "card",
+      h4("Self-Study Comprehension Quiz"),
+      p(style = "color: #64748b; font-size: 13px;", "Test your understanding of this script's architecture, dependencies, and scoping:"),
+      lapply(seq_along(questions), function(i) {
+        q <- questions[[i]]
+        div(style = "border-bottom: 1px solid #e2e8f0; padding: 14px 0;",
+          h5(style = "font-weight: 700; color: #0f172a; margin: 0 0 8px;", sprintf("Question %d: %s", i, q$question)),
+          tags$ul(style = "list-style-type: none; padding-left: 4px;",
+            lapply(q$options, function(opt) {
+              tags$li(style = "margin-bottom: 4px; font-size: 13px; color: #334155;", opt)
+            })
+          ),
+          tags$details(style = "margin-top: 8px; font-size: 13px;",
+            tags$summary(style = "cursor: pointer; color: #2563eb; font-weight: 600;", "👉 Show Answer & Explanation"),
+            div(style = "margin-top: 6px; padding: 10px; background: #eff6ff; border-radius: 6px; color: #1e3a8a;",
+              strong(sprintf("Correct Answer: %s", q$correct_answer)),
+              p(style = "margin: 4px 0 0;", q$explanation)
+            )
+          )
+        )
+      })
+    )
+  })
 }
 
 # --- STANDALONE APP LAUNCHER ---

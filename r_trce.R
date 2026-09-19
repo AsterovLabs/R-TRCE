@@ -41,6 +41,7 @@ source(file.path(script_dir, "R", "analyzer.R"))
 source(file.path(script_dir, "R", "annotator.R"))
 source(file.path(script_dir, "R", "validator.R"))
 source(file.path(script_dir, "R", "explain.R"))
+source(file.path(script_dir, "R", "pedagogy.R"))
 
 usage <- function() {
   cat(
@@ -52,6 +53,9 @@ USAGE
 COMMANDS
   parse <file>                    Parse R code and print component & AST hierarchy
   explain <file> [--md]           Generate architectural explanation and execution graph
+  tutor <file>                    Student-friendly walkthrough, concept decoder & pitfall audit
+  pitfalls <file>                 Audit code for common beginner traps and memory bottlenecks
+  quiz <file> [--md]              Generate tailored student comprehension quiz & study worksheet
   annotate <file> [options]       Generate and inject TRCE @trce-* annotation blocks
   check <file>                    Validate TRCE annotations (6 fields, unique IDs, coverage)
   export-traces <file> [--out F]  Export trace index to JSON for TRCE control plane
@@ -66,10 +70,12 @@ ANNOTATE OPTIONS
   --no-header                     Skip generating the file-level module header
 
 EXAMPLES
+  Rscript r_trce.R tutor path/to/script.R
+  Rscript r_trce.R pitfalls path/to/script.R
+  Rscript r_trce.R quiz path/to/script.R --md
   Rscript r_trce.R explain path/to/script.R
   Rscript r_trce.R explain path/to/script.R --md
   Rscript r_trce.R check path/to/script.R
-  Rscript r_trce.R annotate path/to/script.R --out /tmp/annotated.R
   Rscript r_trce.R annotate path/to/script.R --inplace
   Rscript r_trce.R export-traces path/to/script.R --out traces.json
   Rscript r_trce.R doctor
@@ -129,6 +135,64 @@ main <- function(argv = commandArgs(trailingOnly = TRUE)) {
         cat(exp$markdown, "\n")
       } else {
         cat(exp$text, "\n")
+      }
+    },
+
+    tutor = {
+      parsed <- parse_r_file(target_file)
+      analysis <- analyze_r_file(parsed)
+      walkthrough <- generate_student_explanation(parsed, analysis)
+      cat(walkthrough, "\n")
+    },
+
+    pitfalls = {
+      parsed <- parse_r_file(target_file)
+      analysis <- analyze_r_file(parsed)
+      pitfalls <- detect_student_pitfalls(parsed, analysis)
+      cat("================================================================================\n")
+      cat(sprintf("  R-TRCE PITFALL SENTINEL: %s\n", basename(target_file)))
+      cat("================================================================================\n")
+      if (length(pitfalls) == 0) {
+        cat("  [CLEAN] No beginner pitfalls, memory bottlenecks, or anti-patterns detected.\n")
+      } else {
+        cat(sprintf("  Found %d potential issue(s):\n\n", length(pitfalls)))
+        for (i in seq_along(pitfalls)) {
+          pf <- pitfalls[[i]]
+          cat(sprintf("  %d. [%s] Line %d: %s\n", i, toupper(pf$severity), pf$line, pf$title))
+          cat(sprintf("     Explanation: %s\n", pf$description))
+          cat(sprintf("     Fix:         %s\n", pf$suggestion))
+          if (nzchar(pf$code_snippet)) cat(sprintf("     Code:        '%s'\n", pf$code_snippet))
+          cat("\n")
+        }
+      }
+      cat("================================================================================\n")
+    },
+
+    quiz = {
+      is_md <- "--md" %in% options_args
+      parsed <- parse_r_file(target_file)
+      analysis <- analyze_r_file(parsed)
+      questions <- generate_student_quiz(parsed, analysis)
+
+      if (is_md) {
+        cat(sprintf("# Student Comprehension Quiz: `%s`\n\n", basename(target_file)))
+        for (i in seq_along(questions)) {
+          q <- questions[[i]]
+          cat(sprintf("### Question %d: %s\n\n", i, q$question))
+          for (opt in q$options) cat(sprintf("- %s\n", opt))
+          cat(sprintf("\n<details><summary>Click for Answer & Explanation</summary>\n\n**Correct Answer:** %s\n\n%s\n</details>\n\n", q$correct_answer, q$explanation))
+        }
+      } else {
+        cat("================================================================================\n")
+        cat(sprintf("  STUDENT COMPREHENSION QUIZ: %s\n", basename(target_file)))
+        cat("================================================================================\n\n")
+        for (i in seq_along(questions)) {
+          q <- questions[[i]]
+          cat(sprintf("Q%d: %s\n", i, q$question))
+          for (opt in q$options) cat(sprintf("     %s\n", opt))
+          cat(sprintf("\n     [Answer Key: %s -- %s]\n\n", q$correct_answer, q$explanation))
+        }
+        cat("================================================================================\n")
       }
     },
 
@@ -228,7 +292,7 @@ run_doctor <- function() {
   cat(sprintf("  Platform:        %s\n", R.version$platform))
   cat(sprintf("  JSON Support:    %s\n", if (requireNamespace("jsonlite", quietly = TRUE)) "OK (jsonlite available)" else "MISSING"))
   cat(sprintf("  Shiny Support:   %s\n", if (requireNamespace("shiny", quietly = TRUE)) "OK (shiny available)" else "MISSING"))
-  cat(sprintf("  Core Modules:    parser.R, analyzer.R, annotator.R, validator.R, explain.R [LOADED]\n"))
+  cat(sprintf("  Core Modules:    parser.R, analyzer.R, annotator.R, validator.R, explain.R, pedagogy.R [LOADED]\n"))
   cat("--------------------------------------------------------------------------------\n")
   cat("  Running self-tests...\n")
 

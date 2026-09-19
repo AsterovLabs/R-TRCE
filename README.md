@@ -22,9 +22,41 @@ Built directly on the architectural patterns and lessons from **R Test** (CLI to
   5. `@trce-when`: Lifecycle trigger or event phase
   6. `@trce-why`: Architectural intent and domain problem solved
   7. `@trce-how`: Structural implementation, state mutations, and formulas
+* **Student Tutor & Pedagogical Suite:** Tailored specifically for students learning R:
+  - **Student Pitfall Sentinel:** Audits code for common beginner traps (`1:length(x)`, `x == NA`, `attach()`, `as.numeric(factor)`, and quadratic `rbind` memory loops).
+  - **Data Pipeline Flow Inspector:** Deconstructs multi-stage native (`|>`) and magrittr (`%>%`) pipelines into discrete, human-readable steps.
+  - **Statistical Formula Deconstructor:** Translates model formulas (`y ~ x1 + x2 * x3`) into clear statistical explanations of response variables, predictors, and interaction terms.
+  - **Comprehension Quiz Generator:** Generates automated self-study multiple-choice questions directly from user code.
 * **Non-Destructive Code Injection:** Automatically injects annotations into R source files while preserving existing formatting, author comments, and indentation.
 * **Integrity Audit & Coverage:** Audits existing or generated annotations, verifies field completeness, flags duplicate IDs, and reports coverage percentages.
-* **Dual Interfaces:** Provides both a Unix-philosophy command-line tool (`r_trce.R`) and an interactive Shiny web dashboard (`app.R`).
+* **Dual Interfaces:** Provides both a Unix-philosophy command-line tool (`r_trce.R`) and an interactive Shiny web dashboard (`app.R` with dedicated 🎓 Student Studio).
+
+---
+
+## ⚡ 1-Minute Quick Install
+
+### 🐧 Linux & 🍏 macOS (One-Line Auto-Installer)
+```bash
+curl -fsSL https://raw.githubusercontent.com/AsterovLabs/R-TRCE/main/install.sh | bash
+```
+*Works on all Linux distributions (Ubuntu, Debian, Arch, Fedora, openSUSE, Alpine) and macOS. Creates global `r-trce` and `r-trce-studio` commands.*
+
+### 🪟 Windows 11 & Windows 10 (PowerShell One-Line Auto-Installer)
+Open PowerShell (or Windows Terminal) and run:
+```powershell
+irm https://raw.githubusercontent.com/AsterovLabs/R-TRCE/main/install.ps1 | iex
+```
+*Auto-detects or installs R via winget, configures `PATH`, adds `r-trce` & `r-trce-studio` commands, and places a desktop shortcut for R-TRCE Studio.*
+
+### 📦 Standalone & Offline Downloads (GitHub Releases)
+
+Pre-packaged bundles are available on the [GitHub Releases](https://github.com/AsterovLabs/R-TRCE/releases) page:
+
+| Operating System | Package Archive | Installation |
+| :--- | :--- | :--- |
+| **Windows 11 / 10** | [`r-trce-windows-all.zip`](https://github.com/AsterovLabs/R-TRCE/releases/latest) | Extract zip and double-click `install.bat` |
+| **Linux (All Distros)** | [`r-trce-linux-all.tar.gz`](https://github.com/AsterovLabs/R-TRCE/releases/latest) | Extract tarball and run `./install.sh` |
+| **macOS** | [`r-trce-macos-all.tar.gz`](https://github.com/AsterovLabs/R-TRCE/releases/latest) | Extract tarball and run `./install.sh` |
 
 ---
 
@@ -53,17 +85,27 @@ Run commands with `r_trce.R`:
 /home/sam/.r-env/bin/Rscript r_trce.R explain "path/to/script.R"
 /home/sam/.r-env/bin/Rscript r_trce.R explain "path/to/script.R" --md
 
-# 3. Annotate an R script with TRCE 6-point doc-comments
+# 3. Student tutor walkthrough, package primer & concept decoder
+/home/sam/.r-env/bin/Rscript r_trce.R tutor "path/to/script.R"
+
+# 4. Audit beginner traps and copy-on-modify memory bottlenecks
+/home/sam/.r-env/bin/Rscript r_trce.R pitfalls "path/to/script.R"
+
+# 5. Generate interactive comprehension quiz or Markdown study worksheet
+/home/sam/.r-env/bin/Rscript r_trce.R quiz "path/to/script.R"
+/home/sam/.r-env/bin/Rscript r_trce.R quiz "path/to/script.R" --md
+
+# 6. Annotate an R script with TRCE 6-point doc-comments
 /home/sam/.r-env/bin/Rscript r_trce.R annotate "path/to/script.R" --out "annotated_script.R"
 /home/sam/.r-env/bin/Rscript r_trce.R annotate "path/to/script.R" --inplace
 
-# 4. Audit and check TRCE coverage and integrity
+# 7. Audit and check TRCE coverage and integrity
 /home/sam/.r-env/bin/Rscript r_trce.R check "path/to/script.R"
 
-# 5. Export trace graph to JSON for TRCE control plane integration
+# 8. Export trace graph to JSON for TRCE control plane integration
 /home/sam/.r-env/bin/Rscript r_trce.R export-traces "path/to/script.R" --out "traces.json"
 
-# 6. Run diagnostics and self-test
+# 9. Run diagnostics and self-test
 /home/sam/.r-env/bin/Rscript r_trce.R doctor
 ```
 

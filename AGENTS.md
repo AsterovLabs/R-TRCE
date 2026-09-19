@@ -15,6 +15,7 @@ R-TRCE is an architectural analysis, AST comprehension, and TRCE annotation engi
 | Annotation Synthesizer | `R/annotator.R` | 6-point TRCE metadata formulation and non-destructive code injection engine |
 | Trace Validator | `R/validator.R` | Audits pattern compliance (`^trce-[a-z0-9-]+-[0-9]+$`), 6-field completeness, and coverage |
 | Explainer & Exporter | `R/explain.R` | Generates plain text/Markdown architectural narratives and TRCE JSON export |
+| Pedagogical Subsystem | `R/pedagogy.R` | Student tutor, pitfall sentinel, pipe/formula deconstruction & comprehension quizzes |
 | Automated Test Suite | `tests/test_r_trce.R` | Comprehensive functional verification across synthetic and real-world R Test scripts |
 
 **Language Environment:** R (version >= 4.0.0, default: `/home/sam/.r-env/bin/Rscript`).
@@ -63,6 +64,9 @@ Every major functional block or module must include a standardized doc-comment b
 |---------|-------------|
 | `Rscript r_trce.R parse <file>` | Parse R code AST and display identified components |
 | `Rscript r_trce.R explain <file> [--md]` | Output architectural explanation and dependency breakdown |
+| `Rscript r_trce.R tutor <file>` | Student-friendly walkthrough, concept decoder & pitfall audit |
+| `Rscript r_trce.R pitfalls <file>` | Audit code for common beginner traps and memory bottlenecks |
+| `Rscript r_trce.R quiz <file> [--md]` | Generate tailored student comprehension quiz & study worksheet |
 | `Rscript r_trce.R annotate <file> [opts]` | Synthesize and inject TRCE doc-comments (`--inplace`, `--out`, `--style`) |
 | `Rscript r_trce.R check <file>` | Validate TRCE annotations (pattern, 6 fields, duplicate check, coverage) |
 | `Rscript r_trce.R export-traces <file>` | Export trace graph to TRCE control plane JSON |
