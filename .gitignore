@@ -1,0 +1,12 @@
+# R environment and history
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# Temporary and build artifacts
+output/
+tmp/
+*.tar.gz
+*.Rcheck/
+.DS_Store
