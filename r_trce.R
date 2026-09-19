@@ -1,7 +1,11 @@
 #!/usr/bin/env Rscript
 # =============================================================================
 # r_trce.R -- R Code Parser, Semantic Comprehension & TRCE Annotation Tool
-# -----------------------------------------------------------------------------
+# =============================================================================
+# Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+# Licensed under the Asterov Labs Proprietary Software License.
+# See LICENSE file in the project root for full license terms.
+# =============================================================================
 # WHAT   Parses R code ASTs, classifies architectural components (Shiny UI/server,
 #        snowflake schemas, ANOVA models, CLI runners, pipelines), explains them,
 #        and generates full 6-point TRCE annotations (@trce-*).

@@ -1,7 +1,11 @@
 #!/usr/bin/env Rscript
 # =============================================================================
 # test_r_trce.R -- Automated Verification Suite for R-TRCE
-# -----------------------------------------------------------------------------
+# =============================================================================
+# Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+# Licensed under the Asterov Labs Proprietary Software License.
+# See LICENSE file in the project root for full license terms.
+# =============================================================================
 # WHAT   Executes comprehensive regression and functional tests across all R-TRCE
 #        modules, verifying parser fidelity, semantic analysis, annotation
 #        synthesis, code injection, and validation using corpus from R Test.

@@ -1,3 +1,9 @@
+# =============================================================================
+# R/analyzer.R -- R-TRCE Semantic Analyzer
+# Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+# Licensed under the Asterov Labs Proprietary Software License.
+# See LICENSE file in the project root for full license terms.
+# =============================================================================
 # /**
 #  * @trce-id trce-rparse-003
 #  * @trce-who R-TRCE Engine / Semantic Analysis Subsystem

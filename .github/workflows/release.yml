@@ -26,25 +26,26 @@ jobs:
 
           # 1. Linux Bundle
           mkdir -p dist/linux/r-trce
-          cp -r r_trce.R app.R start_studio.sh install.sh README.md AGENTS.md Context.md R dist/linux/r-trce/
+          cp -r r_trce.R app.R start_studio.sh install.sh README.md LICENSE AGENTS.md Context.md R dist/linux/r-trce/
           chmod +x dist/linux/r-trce/r_trce.R dist/linux/r-trce/app.R dist/linux/r-trce/start_studio.sh dist/linux/r-trce/install.sh
           tar -czf dist/r-trce-linux-all.tar.gz -C dist/linux r-trce
 
           # 2. macOS Bundle
           mkdir -p dist/macos/r-trce
-          cp -r r_trce.R app.R start_studio.sh install.sh README.md AGENTS.md Context.md R dist/macos/r-trce/
+          cp -r r_trce.R app.R start_studio.sh install.sh README.md LICENSE AGENTS.md Context.md R dist/macos/r-trce/
           chmod +x dist/macos/r-trce/r_trce.R dist/macos/r-trce/app.R dist/macos/r-trce/start_studio.sh dist/macos/r-trce/install.sh
           tar -czf dist/r-trce-macos-all.tar.gz -C dist/macos r-trce
 
           # 3. Windows 10 / 11 Bundle
           mkdir -p dist/windows/r-trce
-          cp -r r_trce.R app.R start_studio.bat install.bat install.ps1 README.md AGENTS.md Context.md R dist/windows/r-trce/
+          cp -r r_trce.R app.R start_studio.bat install.bat install.ps1 README.md LICENSE AGENTS.md Context.md R dist/windows/r-trce/
           zip -r dist/r-trce-windows-all.zip dist/windows/r-trce
 
-          # Standalone installer scripts for direct download
+          # Standalone installer scripts and license for direct download
           cp install.sh dist/install.sh
           cp install.ps1 dist/install.ps1
           cp install.bat dist/install.bat
+          cp LICENSE dist/LICENSE
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

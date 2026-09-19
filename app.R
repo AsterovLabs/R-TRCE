@@ -1,7 +1,11 @@
 #!/usr/bin/env Rscript
 # =============================================================================
 # app.R -- Interactive Shiny Studio & Guided Walkthrough for R-TRCE
-# -----------------------------------------------------------------------------
+# =============================================================================
+# Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+# Licensed under the Asterov Labs Proprietary Software License.
+# See LICENSE file in the project root for full license terms.
+# =============================================================================
 # WHAT   Interactive web dashboard to upload or drop an R file, walk through
 #        its architecture step-by-step, review functions and reactive nodes,
 #        and synthesize & inject 6-point TRCE annotations as you go.

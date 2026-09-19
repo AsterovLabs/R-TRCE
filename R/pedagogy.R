@@ -1,3 +1,9 @@
+# =============================================================================
+# R/pedagogy.R -- R-TRCE Pedagogical & Student Tutor Subsystem
+# Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+# Licensed under the Asterov Labs Proprietary Software License.
+# See LICENSE file in the project root for full license terms.
+# =============================================================================
 # /**
 #  * @trce-id trce-rparse-013
 #  * @trce-who R-TRCE Engine / Pedagogical & Educational Subsystem

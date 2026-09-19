@@ -146,3 +146,16 @@ Execute the automated test suite:
 ```
 
 Verifies parser fidelity, dependency resolution, annotation synthesis, code injection idempotency, and 100% TRCE coverage against real scripts from `R Test` (`data_entry_viz.R`, `complex/R/star.R`, `complex/R/variance.R`, `complex/R/schema.R`, `app.R`).
+
+---
+
+## 📄 License & Proprietary Rights
+
+Copyright © 2026 Asterov Labs. All Rights Reserved.
+
+Licensed under the **Asterov Labs Proprietary Software License**.
+* Permitted: Personal, educational, classroom instruction, and academic non-commercial study.
+* Prohibited: Unauthorized commercial distribution, hosting as a paid service, reverse engineering for commercial derivation, or sublicensing without written permission.
+
+See [`LICENSE`](LICENSE) for complete legal terms.
+

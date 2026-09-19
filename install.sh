@@ -2,10 +2,16 @@
 # =============================================================================
 # install.sh -- Cross-Platform Auto-Installer for R-TRCE (Linux & macOS)
 # =============================================================================
+# Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+# Licensed under the Asterov Labs Proprietary Software License.
+# See LICENSE file in the project root for full license terms.
+# =============================================================================
 # USAGE:
 #   curl -fsSL https://raw.githubusercontent.com/AsterovLabs/R-TRCE/main/install.sh | bash
 #   OR locally:
 #   ./install.sh
+#   OR non-interactive (CI):
+#   ./install.sh --no-interaction
 # =============================================================================
 
 set -e
@@ -13,6 +19,14 @@ set -e
 REPO_URL="https://github.com/AsterovLabs/R-TRCE.git"
 INSTALL_DIR="${R_TRCE_HOME:-$HOME/.r-trce}"
 BIN_DIR="$HOME/.local/bin"
+NO_INTERACTION=false
+
+# Parse arguments
+for arg in "$@"; do
+  case "$arg" in
+    --no-interaction) NO_INTERACTION=true ;;
+  esac
+done
 
 # Styling
 BOLD='\033[1m'
@@ -26,11 +40,35 @@ echo -e "${BLUE}${BOLD}"
 echo "  ____        _____ ____   ____ _____ "
 echo " |  _ \      |_   _|  _ \ / ___| ____|"
 echo " | |_) |____   | | | |_) | |   |  _|  "
-echo " |  _ <|____|  | | |  _ <| |___| |___ "
-echo " |_| \_\       |_| |_| \_\\____|_____|"
+echo " |  _ <|____|  | | |  _ <| |___|  ___ "
+echo " |_| \_\       |_| |_| \_\\\____|_____|"
 echo -e "${NC}"
 echo -e "${BOLD}R-TRCE: Architectural Comprehension & Student Tutor Suite${NC}"
 echo -e "Installing to: ${YELLOW}${INSTALL_DIR}${NC}\n"
+
+# Helper: prompt the user even when script is piped via curl | bash.
+# In piped mode, stdin is the script itself — we must read from /dev/tty.
+prompt_yn() {
+  local prompt_text="$1"
+  local default="${2:-n}"
+  if [ "$NO_INTERACTION" = true ]; then
+    # Non-interactive mode: use default
+    [ "$default" = "y" ] && return 0 || return 1
+  fi
+  if [ -t 0 ]; then
+    # stdin is a terminal — read normally
+    read -p "$prompt_text" -n 1 -r REPLY
+    echo
+  elif [ -e /dev/tty ]; then
+    # stdin is piped — read from controlling terminal
+    read -p "$prompt_text" -n 1 -r REPLY < /dev/tty
+    echo
+  else
+    # No terminal available — use default
+    [ "$default" = "y" ] && return 0 || return 1
+  fi
+  [[ "$REPLY" =~ ^[Yy]$ ]]
+}
 
 # 1. Detect Operating System
 OS="$(uname -s)"
@@ -74,9 +112,7 @@ else
     echo "  Visit https://cran.r-project.org to download R for your system."
   fi
   echo ""
-  read -p "Continue installation anyway? (y/N) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+  if ! prompt_yn "Continue installation anyway? (y/N) " "n"; then
     exit 1
   fi
   RSCRIPT_BIN="Rscript"
@@ -86,24 +122,71 @@ fi
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$BIN_DIR"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-if [ -f "$SCRIPT_DIR/r_trce.R" ] && [ -d "$SCRIPT_DIR/R" ]; then
+# Detect if running from a local R-TRCE checkout.
+# BASH_SOURCE may be empty when piped via curl | bash, so handle gracefully.
+SCRIPT_DIR=""
+if [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "bash" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+fi
+
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/r_trce.R" ] && [ -d "$SCRIPT_DIR/R" ]; then
   echo "Installing from local directory: $SCRIPT_DIR"
-  cp -r "$SCRIPT_DIR"/* "$INSTALL_DIR/"
+  if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
+    cp -r "$SCRIPT_DIR"/* "$INSTALL_DIR/"
+  fi
 else
-  echo "Fetching latest R-TRCE release from GitHub..."
+  echo "Fetching latest R-TRCE from GitHub..."
+  DOWNLOAD_OK=false
+
+  # Attempt 1: git clone (disable terminal prompts to prevent hanging)
   if command -v git >/dev/null 2>&1; then
     if [ -d "$INSTALL_DIR/.git" ]; then
       echo "Updating existing installation in $INSTALL_DIR..."
-      cd "$INSTALL_DIR" && git pull --quiet
-    else
-      git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
+      if GIT_TERMINAL_PROMPT=0 git -C "$INSTALL_DIR" pull --quiet 2>/dev/null; then
+        DOWNLOAD_OK=true
+      else
+        echo -e "${YELLOW}Git pull failed. Trying fresh download...${NC}"
+        rm -rf "$INSTALL_DIR"
+        mkdir -p "$INSTALL_DIR"
+      fi
     fi
-  else
-    TAR_URL="https://github.com/AsterovLabs/R-TRCE/archive/refs/heads/main.tar.gz"
-    echo "Downloading archive via curl/tar..."
-    curl -fsSL "$TAR_URL" | tar -xz --strip-components=1 -C "$INSTALL_DIR"
+
+    if [ "$DOWNLOAD_OK" = false ]; then
+      if GIT_TERMINAL_PROMPT=0 git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>/dev/null; then
+        DOWNLOAD_OK=true
+      else
+        echo -e "${YELLOW}Git clone failed. Trying archive download...${NC}"
+      fi
+    fi
   fi
+
+  # Attempt 2: curl + tar archive download
+  if [ "$DOWNLOAD_OK" = false ]; then
+    TAR_URL="https://github.com/AsterovLabs/R-TRCE/archive/refs/heads/main.tar.gz"
+    if command -v curl >/dev/null 2>&1; then
+      if curl -fsSL "$TAR_URL" | tar -xz --strip-components=1 -C "$INSTALL_DIR" 2>/dev/null; then
+        DOWNLOAD_OK=true
+      fi
+    elif command -v wget >/dev/null 2>&1; then
+      if wget -qO- "$TAR_URL" | tar -xz --strip-components=1 -C "$INSTALL_DIR" 2>/dev/null; then
+        DOWNLOAD_OK=true
+      fi
+    fi
+  fi
+
+  if [ "$DOWNLOAD_OK" = false ]; then
+    echo -e "${RED}[!] Error: Could not download R-TRCE.${NC}"
+    echo "Please check your internet connection and try again."
+    echo "Or download manually from: https://github.com/AsterovLabs/R-TRCE/releases"
+    exit 1
+  fi
+fi
+
+# Verify the download has the essential files
+if [ ! -f "$INSTALL_DIR/r_trce.R" ]; then
+  echo -e "${RED}[!] Error: Installation appears incomplete (r_trce.R not found).${NC}"
+  echo "Please try again or download manually from: https://github.com/AsterovLabs/R-TRCE/releases"
+  exit 1
 fi
 
 # 4. Check & Install Required R Packages (jsonlite, shiny)
@@ -130,7 +213,7 @@ fi
 echo "Creating CLI and Studio executable wrappers..."
 
 # r-trce wrapper
-cat << 'EOF' > "$BIN_DIR/r-trce"
+cat << 'WRAPPER_EOF' > "$BIN_DIR/r-trce"
 #!/usr/bin/env bash
 INSTALL_DIR="__INSTALL_DIR__"
 R_BIN="__RSCRIPT_BIN__"
@@ -145,10 +228,10 @@ if [ ! -x "$R_BIN" ]; then
 fi
 
 exec "$R_BIN" "$INSTALL_DIR/r_trce.R" "$@"
-EOF
+WRAPPER_EOF
 
 # r-trce-studio wrapper
-cat << 'EOF' > "$BIN_DIR/r-trce-studio"
+cat << 'WRAPPER_EOF' > "$BIN_DIR/r-trce-studio"
 #!/usr/bin/env bash
 INSTALL_DIR="__INSTALL_DIR__"
 R_BIN="__RSCRIPT_BIN__"
@@ -170,33 +253,46 @@ echo "Starting R-TRCE Interactive Studio on http://${HOST}:${PORT} ..."
 (sleep 1.5 && (xdg-open "http://${HOST}:${PORT}" >/dev/null 2>&1 || open "http://${HOST}:${PORT}" >/dev/null 2>&1 || true)) &
 
 exec "$R_BIN" "$INSTALL_DIR/app.R"
-EOF
+WRAPPER_EOF
 
-# Substitute actual paths
-sed -i "s|__INSTALL_DIR__|$INSTALL_DIR|g" "$BIN_DIR/r-trce" "$BIN_DIR/r-trce-studio"
-sed -i "s|__RSCRIPT_BIN__|$RSCRIPT_BIN|g" "$BIN_DIR/r-trce" "$BIN_DIR/r-trce-studio"
+# Substitute actual paths — handle GNU sed (Linux) vs BSD sed (macOS)
+if [ "$PLATFORM" = "macOS" ]; then
+  sed -i '' "s|__INSTALL_DIR__|$INSTALL_DIR|g" "$BIN_DIR/r-trce" "$BIN_DIR/r-trce-studio"
+  sed -i '' "s|__RSCRIPT_BIN__|$RSCRIPT_BIN|g" "$BIN_DIR/r-trce" "$BIN_DIR/r-trce-studio"
+else
+  sed -i "s|__INSTALL_DIR__|$INSTALL_DIR|g" "$BIN_DIR/r-trce" "$BIN_DIR/r-trce-studio"
+  sed -i "s|__RSCRIPT_BIN__|$RSCRIPT_BIN|g" "$BIN_DIR/r-trce" "$BIN_DIR/r-trce-studio"
+fi
 
 chmod +x "$BIN_DIR/r-trce" "$BIN_DIR/r-trce-studio"
 
 # 6. Verify PATH integration
 PATH_CONFIGURED=false
-if [[ ":$PATH:" == *":$BIN_DIR:"* ]]; then
+if echo ":$PATH:" | grep -q ":$BIN_DIR:"; then
   PATH_CONFIGURED=true
 fi
 
 if [ "$PATH_CONFIGURED" = false ]; then
+  # Detect the user's shell profile
   SHELL_PROFILE=""
-  if [ -n "$BASH_VERSION" ] && [ -f "$HOME/.bashrc" ]; then
-    SHELL_PROFILE="$HOME/.bashrc"
-  elif [ -n "$ZSH_VERSION" ] && [ -f "$HOME/.zshrc" ]; then
-    SHELL_PROFILE="$HOME/.zshrc"
-  elif [ -f "$HOME/.profile" ]; then
+  CURRENT_SHELL="$(basename "${SHELL:-/bin/bash}")"
+  case "$CURRENT_SHELL" in
+    zsh)  [ -f "$HOME/.zshrc" ] && SHELL_PROFILE="$HOME/.zshrc" ;;
+    bash) [ -f "$HOME/.bashrc" ] && SHELL_PROFILE="$HOME/.bashrc" ;;
+    fish) [ -f "$HOME/.config/fish/config.fish" ] && SHELL_PROFILE="$HOME/.config/fish/config.fish" ;;
+  esac
+  # Fallback
+  if [ -z "$SHELL_PROFILE" ] && [ -f "$HOME/.profile" ]; then
     SHELL_PROFILE="$HOME/.profile"
   fi
 
   if [ -n "$SHELL_PROFILE" ]; then
     if ! grep -q "$BIN_DIR" "$SHELL_PROFILE" 2>/dev/null; then
-      echo -e "\nexport PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$SHELL_PROFILE"
+      if [ "$CURRENT_SHELL" = "fish" ]; then
+        echo "set -gx PATH \$HOME/.local/bin \$PATH" >> "$SHELL_PROFILE"
+      else
+        printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$SHELL_PROFILE"
+      fi
       echo -e "${GREEN}Added ~/.local/bin to $SHELL_PROFILE${NC}"
     fi
   fi

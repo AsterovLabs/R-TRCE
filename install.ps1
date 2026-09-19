@@ -5,8 +5,14 @@
     Installs R-TRCE, configures user PATH environment variables, creates Windows
     cmd wrappers (r-trce.cmd and r-trce-studio.cmd), verifies R dependencies,
     and sets up Desktop and Start Menu shortcuts.
+
+    Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+    Licensed under the Asterov Labs Proprietary Software License.
+    See LICENSE file in the project root for full license terms.
 .EXAMPLE
     irm https://raw.githubusercontent.com/AsterovLabs/R-TRCE/main/install.ps1 | iex
+.EXAMPLE
+    .\install.ps1 -InstallDir "C:\Tools\R-TRCE"
 #>
 
 [CmdletBinding()]
@@ -20,7 +26,7 @@ Write-Host @"
   ____        _____ ____   ____ _____ 
  |  _ \      |_   _|  _ \ / ___| ____|
  | |_) |____   | | | |_) | |   |  _|  
- |  _ <|____|  | | |  _ <| |___| |___ 
+ |  _ <|____|  | | |  _ <| |___|  ___ 
  |_| \_\       |_| |_| \_\\____|_____|
 "@ -ForegroundColor Cyan
 
@@ -46,25 +52,33 @@ if (-not $rscriptBin) {
         "HKCU:\SOFTWARE\R-core\R64"
     )
     foreach ($rp in $regPaths) {
-        if (Test-Path $rp) {
-            $installPath = (Get-ItemProperty -Path $rp -ErrorAction SilentlyContinue).InstallPath
-            if ($installPath -and (Test-Path "$installPath\bin\Rscript.exe")) {
-                $rscriptBin = "$installPath\bin\Rscript.exe"
-                break
+        try {
+            if (Test-Path $rp) {
+                $installPath = (Get-ItemProperty -Path $rp -ErrorAction SilentlyContinue).InstallPath
+                if ($installPath -and (Test-Path "$installPath\bin\Rscript.exe")) {
+                    $rscriptBin = "$installPath\bin\Rscript.exe"
+                    break
+                }
             }
+        } catch {
+            # Ignore registry access errors
         }
     }
 }
 
 # Check Program Files
 if (-not $rscriptBin) {
-    $progDirs = Get-ChildItem "C:\Program Files\R" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending
-    foreach ($pd in $progDirs) {
-        $candidate = "$($pd.FullName)\bin\Rscript.exe"
-        if (Test-Path $candidate) {
-            $rscriptBin = $candidate
-            break
+    $searchPaths = @("C:\Program Files\R", "C:\Program Files (x86)\R")
+    foreach ($sp in $searchPaths) {
+        $progDirs = Get-ChildItem $sp -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending
+        foreach ($pd in $progDirs) {
+            $candidate = "$($pd.FullName)\bin\Rscript.exe"
+            if (Test-Path $candidate) {
+                $rscriptBin = $candidate
+                break
+            }
         }
+        if ($rscriptBin) { break }
     }
 }
 
@@ -81,21 +95,39 @@ if ($rscriptBin) {
         $installR = Read-Host "Would you like to install R automatically using winget? (Y/n)"
         if ($installR -ne 'n' -and $installR -ne 'N') {
             Write-Host "Installing R via winget (RProject.R)..." -ForegroundColor Cyan
-            Start-Process -FilePath "winget.exe" -ArgumentList "install --id RProject.R -e --accept-package-agreements --accept-source-agreements" -Wait -NoNewWindow
+            try {
+                Start-Process -FilePath "winget.exe" -ArgumentList "install --id RProject.R -e --accept-package-agreements --accept-source-agreements" -Wait -NoNewWindow
+            } catch {
+                Write-Host "[!] Winget installation failed: $_" -ForegroundColor Yellow
+            }
             
             # Re-check Program Files
             $progDirs = Get-ChildItem "C:\Program Files\R" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending
             if ($progDirs) {
-                $rscriptBin = "$($progDirs[0].FullName)\bin\Rscript.exe"
+                $candidate = "$($progDirs[0].FullName)\bin\Rscript.exe"
+                if (Test-Path $candidate) {
+                    $rscriptBin = $candidate
+                }
             }
         }
     } else {
         Write-Host "Please download and install R from: https://cran.r-project.org/bin/windows/base/" -ForegroundColor Cyan
-        Start-Process "https://cran.r-project.org/bin/windows/base/"
+        try {
+            Start-Process "https://cran.r-project.org/bin/windows/base/"
+        } catch {
+            # Browser launch failed, just continue
+        }
         Read-Host "Press Enter after you have completed the R installation to continue..."
+        
+        # Re-check after user says they installed
+        $cmdR = Get-Command "Rscript.exe" -ErrorAction SilentlyContinue
+        if ($cmdR) {
+            $rscriptBin = $cmdR.Source
+        }
     }
     
     if (-not $rscriptBin) {
+        Write-Host "[!] Warning: R not found. R-TRCE files will be installed, but commands won't work until R is available." -ForegroundColor Yellow
         $rscriptBin = "Rscript.exe"
     }
 }
@@ -106,39 +138,76 @@ New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 New-Item -ItemType Directory -Force -Path $binDir | Out-Null
 
 $currentScriptDir = $PSScriptRoot
+$localInstall = $false
 if ($currentScriptDir -and (Test-Path "$currentScriptDir\r_trce.R") -and (Test-Path "$currentScriptDir\R")) {
     Write-Host "Installing from local directory: $currentScriptDir"
     Copy-Item -Path "$currentScriptDir\*" -Destination $InstallDir -Recurse -Force
-} else {
+    $localInstall = $true
+}
+
+if (-not $localInstall) {
     Write-Host "Downloading R-TRCE from GitHub..." -ForegroundColor Cyan
     $zipUrl = "https://github.com/AsterovLabs/R-TRCE/archive/refs/heads/main.zip"
-    $tempZip = "$env:TEMP\r-trce.zip"
+    $tempZip = Join-Path $env:TEMP "r-trce-$(Get-Date -Format 'yyyyMMddHHmmss').zip"
     
-    Invoke-WebRequest -Uri $zipUrl -OutFile $tempZip -UseBasicParsing
+    try {
+        # Use TLS 1.2+ for compatibility
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+        Invoke-WebRequest -Uri $zipUrl -OutFile $tempZip -UseBasicParsing
+    } catch {
+        Write-Host "[!] Error: Failed to download R-TRCE from GitHub." -ForegroundColor Red
+        Write-Host "    Error: $_" -ForegroundColor Red
+        Write-Host "    Please download manually from: https://github.com/AsterovLabs/R-TRCE/releases" -ForegroundColor Yellow
+        exit 1
+    }
     
-    $tempExtract = "$env:TEMP\r-trce-extract"
+    $tempExtract = Join-Path $env:TEMP "r-trce-extract-$(Get-Date -Format 'yyyyMMddHHmmss')"
     if (Test-Path $tempExtract) { Remove-Item -Recurse -Force $tempExtract }
-    Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
     
-    $subDir = Get-ChildItem $tempExtract -Directory | Select-Object -First 1
-    Copy-Item -Path "$($subDir.FullName)\*" -Destination $InstallDir -Recurse -Force
-    
-    Remove-Item -Force $tempZip -ErrorAction SilentlyContinue
-    Remove-Item -Recurse -Force $tempExtract -ErrorAction SilentlyContinue
+    try {
+        Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+        $subDir = Get-ChildItem $tempExtract -Directory | Select-Object -First 1
+        if (-not $subDir) {
+            throw "Archive extraction produced no directories"
+        }
+        Copy-Item -Path "$($subDir.FullName)\*" -Destination $InstallDir -Recurse -Force
+    } catch {
+        Write-Host "[!] Error: Failed to extract R-TRCE archive." -ForegroundColor Red
+        Write-Host "    Error: $_" -ForegroundColor Red
+        exit 1
+    } finally {
+        Remove-Item -Force $tempZip -ErrorAction SilentlyContinue
+        Remove-Item -Recurse -Force $tempExtract -ErrorAction SilentlyContinue
+    }
+}
+
+# Verify critical files exist
+if (-not (Test-Path "$InstallDir\r_trce.R")) {
+    Write-Host "[!] Error: Installation appears incomplete (r_trce.R not found)." -ForegroundColor Red
+    Write-Host "    Please try again or download from: https://github.com/AsterovLabs/R-TRCE/releases" -ForegroundColor Yellow
+    exit 1
 }
 
 # 3. Verify and Install Missing R Packages
-if ($rscriptBin -and (Test-Path $rscriptBin)) {
+if ($rscriptBin -and ($rscriptBin -ne "Rscript.exe" -or (Get-Command $rscriptBin -ErrorAction SilentlyContinue))) {
     Write-Host "Checking required R packages (jsonlite, shiny)..." -NoNewline
-    $checkScript = "pkgs <- c('jsonlite', 'shiny'); missing <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]; cat(paste(missing, collapse=' '))"
-    $missingPkgs = & "$rscriptBin" -e "$checkScript" 2>$null
-    
-    if (-not $missingPkgs) {
-        Write-Host " All installed!" -ForegroundColor Green
-    } else {
-        Write-Host " Missing: $missingPkgs" -ForegroundColor Yellow
-        Write-Host "Installing missing packages from CRAN..." -ForegroundColor Cyan
-        & "$rscriptBin" -e "install.packages(strsplit('$missingPkgs', ' ')[[1]], repos='https://cloud.r-project.org', quiet=TRUE)"
+    try {
+        $checkScript = "pkgs <- c('jsonlite', 'shiny'); missing <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]; cat(paste(missing, collapse=' '))"
+        $missingPkgs = & "$rscriptBin" -e "$checkScript" 2>$null
+        
+        if (-not $missingPkgs -or $missingPkgs -eq "") {
+            Write-Host " All installed!" -ForegroundColor Green
+        } else {
+            Write-Host " Missing: $missingPkgs" -ForegroundColor Yellow
+            Write-Host "Installing missing packages from CRAN..." -ForegroundColor Cyan
+            try {
+                & "$rscriptBin" -e "install.packages(strsplit('$missingPkgs', ' ')[[1]], repos='https://cloud.r-project.org', quiet=TRUE)"
+            } catch {
+                Write-Host "[!] Warning: Auto-install failed. Run install.packages(c('jsonlite', 'shiny')) inside R." -ForegroundColor Yellow
+            }
+        }
+    } catch {
+        Write-Host " Skipped (R not fully available yet)." -ForegroundColor Yellow
     }
 }
 
@@ -146,6 +215,9 @@ if ($rscriptBin -and (Test-Path $rscriptBin)) {
 Write-Host "Generating CLI and Studio wrappers in $binDir..."
 
 # r-trce.cmd (CLI router)
+$escapedInstallDir = $InstallDir -replace '\\', '\\'
+$escapedRscriptBin = $rscriptBin -replace '\\', '\\'
+
 $rTrceCmd = @"
 @echo off
 setlocal
@@ -153,9 +225,9 @@ set "INSTALL_DIR=$InstallDir"
 set "RSCRIPT_BIN=$rscriptBin"
 
 if not exist "%RSCRIPT_BIN%" (
-    where Rscript >nul 2>nul
-    if %errorlevel% equ 0 (
-        set "RSCRIPT_BIN=Rscript"
+    where Rscript.exe >nul 2>nul
+    if not errorlevel 1 (
+        for /f "delims=" %%i in ('where Rscript.exe') do set "RSCRIPT_BIN=%%i"
     ) else (
         echo Error: Rscript.exe not found. Please ensure R is installed and on your PATH. 1>&2
         exit /b 1
@@ -174,9 +246,9 @@ set "INSTALL_DIR=$InstallDir"
 set "RSCRIPT_BIN=$rscriptBin"
 
 if not exist "%RSCRIPT_BIN%" (
-    where Rscript >nul 2>nul
-    if %errorlevel% equ 0 (
-        set "RSCRIPT_BIN=Rscript"
+    where Rscript.exe >nul 2>nul
+    if not errorlevel 1 (
+        for /f "delims=" %%i in ('where Rscript.exe') do set "RSCRIPT_BIN=%%i"
     ) else (
         echo Error: Rscript.exe not found. Please ensure R is installed and on your PATH. 1>&2
         exit /b 1
@@ -195,8 +267,15 @@ Set-Content -Path "$binDir\r-trce-studio.cmd" -Value $rTrceStudioCmd -Encoding A
 # 5. Add $binDir to User Environment PATH
 Write-Host "Configuring User PATH environment variable..."
 $currentUserPath = [Environment]::GetEnvironmentVariable("Path", [EnvironmentVariableTarget]::User)
+if (-not $currentUserPath) { $currentUserPath = "" }
+
 if ($currentUserPath -notlike "*$binDir*") {
-    $newPath = "$currentUserPath;$binDir"
+    # Avoid adding trailing semicolons
+    if ($currentUserPath -and -not $currentUserPath.EndsWith(";")) {
+        $newPath = "$currentUserPath;$binDir"
+    } else {
+        $newPath = "$currentUserPath$binDir"
+    }
     [Environment]::SetEnvironmentVariable("Path", $newPath, [EnvironmentVariableTarget]::User)
     $env:Path = "$env:Path;$binDir"
     Write-Host "Added $binDir to User PATH." -ForegroundColor Green
@@ -210,19 +289,23 @@ try {
     
     # Desktop Shortcut
     $desktopPath = [Environment]::GetFolderPath([Environment+SpecialFolder]::Desktop)
-    $shortcutDesktop = $wshShell.CreateShortcut("$desktopPath\R-TRCE Studio.lnk")
-    $shortcutDesktop.TargetPath = "$binDir\r-trce-studio.cmd"
-    $shortcutDesktop.WorkingDirectory = $InstallDir
-    $shortcutDesktop.Description = "R-TRCE Interactive Studio & Guided Walkthrough"
-    $shortcutDesktop.Save()
+    if ($desktopPath -and (Test-Path $desktopPath)) {
+        $shortcutDesktop = $wshShell.CreateShortcut("$desktopPath\R-TRCE Studio.lnk")
+        $shortcutDesktop.TargetPath = "$binDir\r-trce-studio.cmd"
+        $shortcutDesktop.WorkingDirectory = $InstallDir
+        $shortcutDesktop.Description = "R-TRCE Interactive Studio & Guided Walkthrough"
+        $shortcutDesktop.Save()
+    }
     
     # Start Menu Shortcut
     $startMenuPrograms = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
-    $shortcutStart = $wshShell.CreateShortcut("$startMenuPrograms\R-TRCE Studio.lnk")
-    $shortcutStart.TargetPath = "$binDir\r-trce-studio.cmd"
-    $shortcutStart.WorkingDirectory = $InstallDir
-    $shortcutStart.Description = "R-TRCE Interactive Studio & Guided Walkthrough"
-    $shortcutStart.Save()
+    if ($startMenuPrograms -and (Test-Path $startMenuPrograms)) {
+        $shortcutStart = $wshShell.CreateShortcut("$startMenuPrograms\R-TRCE Studio.lnk")
+        $shortcutStart.TargetPath = "$binDir\r-trce-studio.cmd"
+        $shortcutStart.WorkingDirectory = $InstallDir
+        $shortcutStart.Description = "R-TRCE Interactive Studio & Guided Walkthrough"
+        $shortcutStart.Save()
+    }
     
     Write-Host "Created Desktop & Start Menu shortcuts." -ForegroundColor Green
 } catch {
@@ -243,4 +326,6 @@ Quick Start Commands (in PowerShell or CMD):
   r-trce-studio               Launch interactive web studio
 
 You can also launch "R-TRCE Studio" directly from your Desktop or Start Menu!
+
+NOTE: You may need to restart your terminal for PATH changes to take effect.
 "@ -ForegroundColor Green

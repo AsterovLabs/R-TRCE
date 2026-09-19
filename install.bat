@@ -3,6 +3,10 @@
 :: install.bat -- Double-Click Windows Installer for R-TRCE
 :: Works seamlessly on Windows 10 & Windows 11
 :: =============================================================================
+:: Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+:: Licensed under the Asterov Labs Proprietary Software License.
+:: See LICENSE file in the project root for full license terms.
+:: =============================================================================
 
 title R-TRCE Auto-Installer
 cd /d "%~dp0"

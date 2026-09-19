@@ -1,3 +1,9 @@
+# =============================================================================
+# R/validator.R -- R-TRCE Trace Validator
+# Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+# Licensed under the Asterov Labs Proprietary Software License.
+# See LICENSE file in the project root for full license terms.
+# =============================================================================
 # /**
 #  * @trce-id trce-rparse-007
 #  * @trce-who R-TRCE Engine / Validator Subsystem

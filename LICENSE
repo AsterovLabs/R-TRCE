@@ -1,0 +1,146 @@
+                    ASTEROV LABS PROPRIETARY SOFTWARE LICENSE
+                           Version 1.0, September 2026
+
+                    Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+
+================================================================================
+
+NOTICE: This software and associated documentation files (the "Software") are
+the proprietary and confidential property of Asterov Labs ("Licensor"). This
+license governs your use of the Software. By downloading, installing, copying,
+or otherwise using the Software, you agree to be bound by the terms of this
+license agreement.
+
+================================================================================
+
+1. GRANT OF LICENSE
+
+   Subject to the terms of this license, Asterov Labs grants you a limited,
+   non-exclusive, non-transferable, revocable license to:
+
+   (a) USE the Software for personal, educational, and non-commercial academic
+       purposes, including but not limited to coursework, self-study, and
+       classroom instruction.
+
+   (b) DOWNLOAD and INSTALL the Software on devices you own or control for the
+       purposes described in Section 1(a).
+
+   (c) VIEW the source code of the Software for learning, reference, and
+       educational study purposes.
+
+2. RESTRICTIONS
+
+   You may NOT, without prior written authorization from Asterov Labs:
+
+   (a) DISTRIBUTE, sublicense, sell, lease, rent, or otherwise transfer the
+       Software or any portion thereof to any third party.
+
+   (b) MODIFY, adapt, translate, reverse engineer, decompile, disassemble, or
+       create derivative works based on the Software for any commercial purpose.
+
+   (c) USE the Software, in whole or in part, for any commercial purpose,
+       including but not limited to: incorporation into commercial products,
+       offering the Software as a service, or using the Software to generate
+       revenue directly or indirectly.
+
+   (d) REMOVE, alter, or obscure any proprietary notices, labels, trademarks,
+       copyright notices, or this license from the Software or any copies thereof.
+
+   (e) REDISTRIBUTE or REPUBLISH the source code, compiled binaries, or any
+       substantial portion of the Software on any platform, repository, or
+       distribution channel without express written permission.
+
+   (f) CLAIM ownership, authorship, or origin of the Software or any portion
+       thereof, or misrepresent the Software as being developed by anyone other
+       than Asterov Labs.
+
+3. EDUCATIONAL & ACADEMIC USE
+
+   Asterov Labs encourages the use of this Software in educational settings.
+   The following uses are explicitly permitted under this license:
+
+   (a) Teachers and instructors may use R-TRCE as a teaching aid in classroom
+       settings, provided the Software is not redistributed to students outside
+       of the officially supported installation methods (GitHub repository and
+       official release channels).
+
+   (b) Students may use R-TRCE to analyze and learn from their own R code, and
+       may include R-TRCE output (annotations, explanations, quizzes) in
+       coursework submissions with proper attribution to Asterov Labs.
+
+   (c) Academic researchers may use R-TRCE for non-commercial research purposes
+       and may reference R-TRCE in academic publications with proper citation.
+
+4. CONTRIBUTIONS
+
+   If you submit any modifications, improvements, bug fixes, or other
+   contributions ("Contributions") to the Software, you hereby assign to
+   Asterov Labs all right, title, and interest in and to such Contributions,
+   including all intellectual property rights therein. You represent that you
+   have the right to make such assignment.
+
+5. INTELLECTUAL PROPERTY
+
+   The Software is protected by copyright laws and international treaties.
+   Asterov Labs retains all right, title, and interest in and to the Software,
+   including all intellectual property rights. This license does not grant you
+   any rights to patents, copyrights, trade secrets, trademarks, or any other
+   rights with respect to the Software, except as expressly set forth herein.
+
+   The name "Asterov Labs", the Asterov Labs logo, "R-TRCE", and all related
+   names, logos, product and service names, designs, and slogans are trademarks
+   of Asterov Labs. You may not use such marks without the prior written
+   permission of Asterov Labs, except as required for reasonable and customary
+   use in describing the origin of the Software (e.g., "Powered by R-TRCE by
+   Asterov Labs").
+
+6. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. IN NO EVENT
+   SHALL ASTEROV LABS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
+   WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF,
+   OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+7. LIMITATION OF LIABILITY
+
+   IN NO EVENT SHALL ASTEROV LABS, ITS OFFICERS, DIRECTORS, EMPLOYEES, AGENTS,
+   OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL,
+   OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA,
+   USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM (i) YOUR ACCESS TO
+   OR USE OF OR INABILITY TO ACCESS OR USE THE SOFTWARE; (ii) ANY CONDUCT OR
+   CONTENT OF ANY THIRD PARTY; (iii) ANY CONTENT OBTAINED FROM THE SOFTWARE;
+   AND (iv) UNAUTHORIZED ACCESS, USE, OR ALTERATION OF YOUR TRANSMISSIONS OR
+   CONTENT, WHETHER BASED ON WARRANTY, CONTRACT, TORT (INCLUDING NEGLIGENCE), OR
+   ANY OTHER LEGAL THEORY, WHETHER OR NOT WE HAVE BEEN INFORMED OF THE
+   POSSIBILITY OF SUCH DAMAGE.
+
+8. TERMINATION
+
+   This license is effective until terminated. Your rights under this license
+   will terminate automatically without notice if you fail to comply with any
+   of its terms. Upon termination, you shall cease all use of the Software and
+   destroy all copies, full or partial, of the Software in your possession or
+   control.
+
+9. GOVERNING LAW
+
+   This license shall be governed by and construed in accordance with the laws
+   of the jurisdiction in which Asterov Labs is established, without regard to
+   its conflict of laws principles.
+
+10. CONTACT
+
+    For licensing inquiries, commercial use requests, or permissions beyond the
+    scope of this license, please contact:
+
+    Asterov Labs
+    GitHub: https://github.com/AsterovLabs
+    Email: licensing@asterovlabs.com
+
+================================================================================
+
+                    Copyright (c) 2026 Asterov Labs. All Rights Reserved.
+                    R-TRCE is a trademark of Asterov Labs.
