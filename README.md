@@ -39,7 +39,12 @@ Built directly on the architectural patterns and lessons from **R Test** (CLI to
 ```bash
 curl -fsSL https://raw.githubusercontent.com/AsterovLabs/R-TRCE/main/install.sh | bash
 ```
-*Works on all Linux distributions (Ubuntu, Debian, Arch, Fedora, openSUSE, Alpine) and macOS. Creates global `r-trce` and `r-trce-studio` commands.*
+*Works on all Linux distributions (Debian, Ubuntu, Arch, Fedora, openSUSE, Alpine), Chromebooks (Baguette / Crostini / ChromeOS Linux), and macOS. Creates global `r-trce` and `r-trce-studio` commands.*
+
+> [!TIP]
+> **Using on a Chromebook (ChromeOS / Baguette Linux)?**
+> The interactive studio listens on `0.0.0.0:8083`. You can access it directly inside ChromeOS via `http://localhost:8083` or `http://penguin.linux.test:8083`.
+
 
 ### 🪟 Windows 11 & Windows 10 (PowerShell One-Line Auto-Installer)
 Open PowerShell (or Windows Terminal) and run:

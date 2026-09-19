@@ -63,6 +63,7 @@ COMMANDS
   annotate <file> [options]       Generate and inject TRCE @trce-* annotation blocks
   check <file>                    Validate TRCE annotations (6 fields, unique IDs, coverage)
   export-traces <file> [--out F]  Export trace index to JSON for TRCE control plane
+  studio [port]                   Launch interactive Shiny web studio (default port: 8083)
   doctor                          Run environment diagnostics and self-test verification
   help, -h, --help                Show this help message and exit
 
@@ -97,6 +98,19 @@ main <- function(argv = commandArgs(trailingOnly = TRUE)) {
 
   if (cmd == "doctor") {
     run_doctor()
+    quit(status = 0)
+  }
+
+  if (cmd == "studio") {
+    app_file <- file.path(script_dir, "app.R")
+    if (!file.exists(app_file)) {
+      cat(sprintf("Error: app.R not found in '%s'\n", script_dir), file = stderr())
+      quit(status = 1)
+    }
+    if (length(args) > 0 && !is.na(as.integer(args[1]))) {
+      Sys.setenv(PORT = args[1])
+    }
+    source(app_file)
     quit(status = 0)
   }
 

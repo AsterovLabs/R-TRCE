@@ -246,11 +246,43 @@ if [ ! -x "$R_BIN" ]; then
 fi
 
 PORT="${PORT:-8083}"
-HOST="${HOST:-127.0.0.1}"
+HOST="${HOST:-0.0.0.0}"
 
-echo "Starting R-TRCE Interactive Studio on http://${HOST}:${PORT} ..."
-# Try opening browser in background
-(sleep 1.5 && (xdg-open "http://${HOST}:${PORT}" >/dev/null 2>&1 || open "http://${HOST}:${PORT}" >/dev/null 2>&1 || true)) &
+# Auto-detect IP addresses on Linux/Chromebook/container
+IP_LIST="127.0.0.1 localhost"
+if command -v hostname >/dev/null 2>&1; then
+  HOST_IPS="$(hostname -I 2>/dev/null || true)"
+  [ -n "$HOST_IPS" ] && IP_LIST="$IP_LIST $HOST_IPS"
+fi
+
+echo "=================================================================="
+echo "  Starting R-TRCE Interactive Studio"
+echo "=================================================================="
+echo "  Listening on: http://${HOST}:${PORT}"
+echo ""
+echo "  Open your browser to any of the following URLs:"
+echo "   -> http://localhost:${PORT}"
+echo "   -> http://127.0.0.1:${PORT}"
+for ip in $HOST_IPS; do
+  [ "$ip" != "127.0.0.1" ] && echo "   -> http://${ip}:${PORT}"
+done
+if [ -d /dev/vsock ] || [ -f /run/systemd/container ] || [ -d /mnt/chromeos ]; then
+  echo ""
+  echo "  [Chromebook / ChromeOS / Baguette Tip]:"
+  echo "   -> In Chrome browser: http://penguin.linux.test:${PORT}"
+fi
+echo "=================================================================="
+
+# Try opening browser in background (suppress noise if no display)
+(sleep 1.5 && (
+  if command -v garcon-url-handler >/dev/null 2>&1; then
+    garcon-url-handler "http://localhost:${PORT}" >/dev/null 2>&1 || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "http://localhost:${PORT}" >/dev/null 2>&1 || true
+  elif command -v open >/dev/null 2>&1; then
+    open "http://localhost:${PORT}" >/dev/null 2>&1 || true
+  fi
+)) &
 
 exec "$R_BIN" "$INSTALL_DIR/app.R"
 WRAPPER_EOF

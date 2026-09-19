@@ -838,9 +838,40 @@ app <- shinyApp(ui = ui, server = server)
 
 if (!interactive()) {
   port <- as.integer(Sys.getenv("PORT", "8083"))
-  host <- Sys.getenv("HOST", "127.0.0.1")
-  message(sprintf("Starting R-TRCE Studio on http://%s:%d ...", host, port))
+  # Bind on 0.0.0.0 by default on Linux/Baguette/Crostini so container port forwarding and host access works seamlessly
+  host <- Sys.getenv("HOST", "0.0.0.0")
+
+  # Detect network interfaces to display all accessible URLs
+  ip_candidates <- c("127.0.0.1", "localhost")
+  try({
+    # Try hostname -I on Linux
+    ips_raw <- suppressWarnings(system("hostname -I 2>/dev/null", intern = TRUE))
+    if (length(ips_raw) > 0 && nchar(trimws(ips_raw[1])) > 0) {
+      detected_ips <- strsplit(trimws(ips_raw[1]), "\\s+")[[1]]
+      ip_candidates <- unique(c(ip_candidates, detected_ips))
+    }
+  }, silent = TRUE)
+
+  message("==================================================================")
+  message("  R-TRCE Interactive Studio & Guided Walkthrough")
+  message("==================================================================")
+  message(sprintf("  Listening on: http://%s:%d", host, port))
+  message("\n  Access the Studio in your browser via any of these URLs:")
+  message(sprintf("   * Primary (Local):             http://localhost:%d", port))
+  message(sprintf("   * Loopback:                    http://127.0.0.1:%d", port))
+  for (ip in ip_candidates[!ip_candidates %in% c("127.0.0.1", "localhost")]) {
+    message(sprintf("   * Container / Network IP:      http://%s:%d", ip, port))
+  }
+  if (dir.exists("/dev/vsock") || file.exists("/run/systemd/container") || dir.exists("/mnt/chromeos")) {
+    message("\n  [Chromebook / ChromeOS / Baguette Note]:")
+    message(sprintf("   * From ChromeOS browser, try:   http://penguin.linux.test:%d", port))
+    message(sprintf("   * Or use container IP:          http://%s:%d", 
+                    if (length(ip_candidates) > 2) ip_candidates[3] else "127.0.0.1", port))
+  }
+  message("==================================================================\n")
+
   shiny::runApp(app, host = host, port = port, launch.browser = FALSE)
 } else {
   app
 }
+
