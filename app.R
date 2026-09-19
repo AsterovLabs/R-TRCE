@@ -27,10 +27,42 @@
 #  * @trce-how Binds reactive code inputs to parser.R, analyzer.R, annotator.R, and validator.R, displaying interactive steppers and diffs
 #  */
 
-suppressPackageStartupMessages({
-  if (!requireNamespace("shiny", quietly = TRUE)) {
-    stop("Package 'shiny' is required: install.packages('shiny')", call. = FALSE)
+# Verify and load Shiny
+if (!requireNamespace("shiny", quietly = TRUE)) {
+  message("\n==================================================================")
+  message("  R-TRCE Studio requires the 'shiny' package.")
+  message("  Attempting to install 'shiny' automatically into user library...")
+  message("==================================================================\n")
+
+  user_lib <- Sys.getenv("R_LIBS_USER")
+  if (is.null(user_lib) || user_lib == "") {
+    user_lib <- file.path(Sys.getenv("HOME"), "R", "library")
   }
+  if (!dir.exists(user_lib)) {
+    dir.create(user_lib, recursive = TRUE, showWarnings = FALSE)
+  }
+  .libPaths(unique(c(user_lib, .libPaths())))
+
+  installed_ok <- tryCatch({
+    install.packages("shiny", lib = user_lib, repos = "https://cloud.r-project.org", quiet = FALSE)
+    requireNamespace("shiny", quietly = TRUE)
+  }, error = function(e) {
+    FALSE
+  })
+
+  if (!installed_ok) {
+    cat("\n[!] Error: Unable to automatically install 'shiny'.\n\n", file = stderr())
+    cat("Please install Shiny manually using one of the following methods:\n\n", file = stderr())
+    cat("  Option 1 (Inside R):\n", file = stderr())
+    cat("    install.packages('shiny', repos='https://cloud.r-project.org')\n\n", file = stderr())
+    cat("  Option 2 (Debian / Ubuntu / Chromebook Crostini terminal):\n", file = stderr())
+    cat("    sudo apt update && sudo apt install -y r-cran-shiny\n\n", file = stderr())
+    stop("Package 'shiny' is required to launch R-TRCE Studio.", call. = FALSE)
+  }
+  message("\n[OK] 'shiny' installed successfully!\n")
+}
+
+suppressPackageStartupMessages({
   library(shiny)
 })
 

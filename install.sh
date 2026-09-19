@@ -202,10 +202,28 @@ if [ -x "$RSCRIPT_BIN" ] || command -v "$RSCRIPT_BIN" >/dev/null 2>&1; then
     echo -e "${GREEN}All installed!${NC}"
   else
     echo -e "${YELLOW}Missing: $MISSING_PKGS${NC}"
-    echo "Installing missing packages ($MISSING_PKGS) from CRAN..."
-    "$RSCRIPT_BIN" -e "install.packages(strsplit('$MISSING_PKGS', ' ')[[1]], repos='https://cloud.r-project.org', quiet=TRUE)" || {
-      echo -e "${YELLOW}[!] Warning: Automatic package install failed. You may need to run: install.packages(c('jsonlite', 'shiny')) manually inside R.${NC}"
+    echo "Installing missing packages ($MISSING_PKGS) from CRAN into user library..."
+    "$RSCRIPT_BIN" -e "
+      pkgs <- strsplit('$MISSING_PKGS', ' ')[[1]]
+      user_lib <- Sys.getenv('R_LIBS_USER')
+      if (is.null(user_lib) || user_lib == '') user_lib <- file.path(Sys.getenv('HOME'), 'R', 'library')
+      if (!dir.exists(user_lib)) dir.create(user_lib, recursive = TRUE, showWarnings = FALSE)
+      .libPaths(unique(c(user_lib, .libPaths())))
+      install.packages(pkgs, lib = user_lib, repos = 'https://cloud.r-project.org', quiet = FALSE)
+    " || {
+      echo -e "${YELLOW}[!] Note: If compiling from CRAN failed, you can install precompiled binaries on Debian/Ubuntu/Chromebook with:${NC}"
+      echo -e "    ${BOLD}sudo apt update && sudo apt install -y r-cran-shiny r-cran-jsonlite${NC}"
     }
+
+    # Verify if installed now
+    RECHECK="$("$RSCRIPT_BIN" -e '
+      pkgs <- c("jsonlite", "shiny")
+      missing <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+      cat(paste(missing, collapse = " "))
+    ' 2>/dev/null || true)"
+    if [ -z "$RECHECK" ]; then
+      echo -e "${GREEN}Successfully installed required R packages!${NC}"
+    fi
   fi
 fi
 
